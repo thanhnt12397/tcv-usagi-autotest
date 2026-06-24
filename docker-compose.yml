@@ -1,0 +1,7 @@
+services:
+  playwright:
+    container_name: usagi-test
+    build: .
+    volumes:
+      - ./:/var/usagi
+    tty: true

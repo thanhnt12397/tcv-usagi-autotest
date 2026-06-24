@@ -1,0 +1,23 @@
+{
+  "name": "usagi_autotest",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:setup-auth": "playwright test setup-auth.spec.ts --config=playwright.setup.config.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^22.13.4",
+    "dotenv": "^16.4.7"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "googleapis": "^172.0.0",
+    "playwright": "^1.57.0"
+  }
+}
