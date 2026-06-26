@@ -145,15 +145,114 @@ test.describe('PC - Users Detail', () => {
     });
   });
 
-  test('TC08 - Users detail > tab=permissions (display)', async ({ authedPage: page }) => {
+  test('TC08 - Users detail > tab=permissions (edit plan)', async ({ authedPage: page }) => {
     await page.goto('/accounts/users/854352?tab=permissions');
     await page.waitForLoadState('domcontentloaded');
 
-    await test.step('Verify permissions table columns + 追加', async () => {
+    await test.step('Step 1: Verify permissions table columns + 追加', async () => {
       for (const col of ['サービス', 'プラン名', 'サービス開始日', 'サービス終了日', '認証日', '有効/無効', '編集']) {
         await expect(page.getByText(col).first()).toBeVisible();
       }
       await expect(page.getByRole('button', { name: '追加' })).toBeVisible();
+    });
+
+    await test.step('Step 2-3: Click 編集する on first table row', async () => {
+      await page.locator('tbody tr').first().getByRole('button', { name: '編集する' }).click();
+    });
+
+    await test.step('Step 4: Edit プラン名 and click 保存 - verify success toast', async () => {
+      // プラン名 is a Radix select (role=combobox) in the first row's 2nd column
+      await page.locator('tbody tr').first().getByRole('combobox').first().click();
+      await page.getByRole('option', { name: 'Premium Membership (US$100/Month, Annual Fee US$1200)' }).click();
+      await page.getByRole('button', { name: '保存' }).click();
+      await expect(page.getByText('車両(日本は海外車輌掲載)サービスを更新しました。')).toBeVisible({ timeout: 10000 });
+    });
+
+    await test.step('Step 5: Click 編集する on first row again', async () => {
+      await page.locator('tbody tr').first().getByRole('button', { name: '編集する' }).click();
+    });
+
+    await test.step('Step 6: Edit サービス終了日 = 9999/12/31 and click 保存 - verify success toast', async () => {
+      // サービス終了日 is the 4th column of the first row
+      await page.locator('tbody tr').first().locator('td').nth(3).getByPlaceholder('YYYY/MM/DD').fill('9999/12/31');
+      await page.getByRole('button', { name: '保存' }).click();
+      await expect(page.getByText('車両(日本は海外車輌掲載)サービスを更新しました。')).toBeVisible({ timeout: 10000 });
+    });
+
+    await test.step('Step 7: Click 編集する on first row again', async () => {
+      await page.locator('tbody tr').first().getByRole('button', { name: '編集する' }).click();
+    });
+
+    await test.step('Step 8: Edit サービス開始日 = current date and click 保存 - verify success toast', async () => {
+      const now = new Date();
+      const today = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
+      // サービス開始日 is the 3rd column of the first row
+      await page.locator('tbody tr').first().locator('td').nth(2).getByPlaceholder('YYYY/MM/DD').fill(today);
+      await page.getByRole('button', { name: '保存' }).click();
+      await expect(page.getByText('車両(日本は海外車輌掲載)サービスを更新しました。').first()).toBeVisible({ timeout: 10000 });
+    });
+
+    await test.step('Step 9: Click 編集する on first row again', async () => {
+      await page.locator('tbody tr').first().getByRole('button', { name: '編集する' }).click();
+    });
+
+    await test.step('Step 10: Edit 認証日 = current date + 2 days and click 保存 - verify success toast', async () => {
+      const d = new Date();
+      d.setDate(d.getDate() + 2);
+      const date = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+      // 認証日 is the 5th column of the first row
+      await page.locator('tbody tr').first().locator('td').nth(4).getByPlaceholder('YYYY/MM/DD').fill(date);
+      await page.getByRole('button', { name: '保存' }).click();
+      await expect(page.getByText('車両(日本は海外車輌掲載)サービスを更新しました。').first()).toBeVisible({ timeout: 10000 });
+    });
+
+    await test.step('Step 11: Click 編集する on first row again', async () => {
+      await page.locator('tbody tr').first().getByRole('button', { name: '編集する' }).click();
+    });
+
+    await test.step('Step 12: Edit 有効/無効 = 無効 and click 保存 - verify success toast', async () => {
+      // 有効/無効 is a Radix select (role=combobox) in the 6th column of the first row
+      await page.locator('tbody tr').first().locator('td').nth(5).getByRole('combobox').click();
+      await page.getByRole('option', { name: '無効', exact: true }).click();
+      await page.getByRole('button', { name: '保存' }).click();
+      await expect(page.getByText('車両(日本は海外車輌掲載)サービスを更新しました。').first()).toBeVisible({ timeout: 10000 });
+    });
+
+    await test.step('Step 13: Click 編集する on first row again', async () => {
+      await page.locator('tbody tr').first().getByRole('button', { name: '編集する' }).click();
+    });
+
+    await test.step('Step 14: 開始日=9999/12/31, 終了日=9999/12/30, 保存 - verify date range error', async () => {
+      const row = page.locator('tbody tr').first();
+      await row.locator('td').nth(2).getByPlaceholder('YYYY/MM/DD').fill('9999/12/31'); // サービス開始日
+      await row.locator('td').nth(3).getByPlaceholder('YYYY/MM/DD').fill('9999/12/30'); // サービス終了日
+      await page.getByRole('button', { name: '保存' }).click();
+      await expect(page.getByText('サービス終了日はサービス開始日より後の日付を指定してください。')).toBeVisible();
+    });
+
+    await test.step('Step 15: Exit invalid edit, click 編集する on first row again', async () => {
+      const row = page.locator('tbody tr').first();
+      await row.getByRole('button', { name: 'キャンセル' }).click();
+      await row.getByRole('button', { name: '編集する' }).click();
+    });
+
+    await test.step('Step 16: サービス終了日 = current date - 1 day, 保存 - verify row turns red', async () => {
+      const fmt = (offset: number) => {
+        const d = new Date();
+        d.setDate(d.getDate() + offset);
+        return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+      };
+      const row = page.locator('tbody tr').first();
+      // 開始日 must precede 終了日; lower it so 終了日 = yesterday is a valid (past) range
+      await row.locator('td').nth(2).getByPlaceholder('YYYY/MM/DD').fill(fmt(-3));
+      await row.locator('td').nth(3).getByPlaceholder('YYYY/MM/DD').fill(fmt(-1));
+      await page.getByRole('button', { name: '保存' }).click();
+      // wait for edit to close (row back to read mode)
+      await row.getByRole('button', { name: '編集する' }).waitFor({ state: 'visible', timeout: 10000 });
+      // expired service (終了日 in the past) → row highlighted red with white text
+      await expect(row).toHaveClass(/bg-\[#B90E0A\]/);
+      await expect(row).toHaveClass(/text-white/);
+      await expect(row).toHaveCSS('color', 'rgb(255, 255, 255)');
     });
   });
 
