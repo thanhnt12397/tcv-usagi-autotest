@@ -260,7 +260,7 @@ test.describe('PC - Users Detail', () => {
     await page.goto('/accounts/users/853172?tab=profile');
     await page.waitForLoadState('domcontentloaded');
 
-    await test.step('Verify profile fields visible', async () => {
+    await test.step('Step 1: Verify all profile fields have data displayed + 編集 button', async () => {
       for (const field of ['会社名', '住所', '市区町村', '都道府県', '郵便番号', '国', '電話番号',
         '携帯電話', 'FAX', 'メールアドレス', 'ウェブサイトURL', '担当者', '営業時間', '言語',
         '紹介タイトル', 'お客様へのメッセージ', '設立年', '法人格', '資本金', '年間売上高',
@@ -270,39 +270,173 @@ test.describe('PC - Users Detail', () => {
       await expect(page.getByRole('button', { name: '編集' })).toBeVisible();
     });
 
-    await test.step('Click PRページのプレビュー - verify URL (read-only)', async () => {
-      const [newPage] = await Promise.all([
-        page.context().waitForEvent('page'),
-        page.getByText('PRページのプレビュー').click(),
-      ]);
-      await expect(newPage).toHaveURL(/tcv-dev\.com\/pr\/853172/);
-      await newPage.close();
+    await test.step('Step 2: PRページのプレビュー opens new tab at /pr/853172/', async () => {
+      // Confirm the new-tab destination only (do not load the external PR page):
+      // target=_blank + href prove a click opens a new tab to the expected URL.
+      const link = page.getByRole('link', { name: '[PRページのプレビュー]' });
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link).toHaveAttribute('href', 'https://www.tcv-dev.com/pr/853172/');
+    });
+
+    await test.step('Step 4: Click 編集 button', async () => {
+      await page.getByRole('button', { name: '編集' }).click();
+    });
+
+    await test.step('Step 5: Click キャンセル - info unchanged, no toast', async () => {
+      await page.getByRole('button', { name: 'キャンセル' }).click();
+      // info remains unchanged: 編集 button back, fields still visible
+      await expect(page.getByRole('button', { name: '編集' })).toBeVisible();
+      await expect(page.getByText('会社名').first()).toBeVisible();
+      // no toast displayed (no success/error outcome message)
+      await expect(page.getByText(/しました|エラー|失敗/)).toHaveCount(0);
+    });
+
+    await test.step('Step 6: Click 編集 - enter edit mode (確認 button shown)', async () => {
+      await page.getByRole('button', { name: '編集' }).click();
+      await expect(page.getByRole('button', { name: '確認', exact: true })).toBeVisible();
+    });
+
+    await test.step('Step 7: Click 確認 - confirm view (戻る + 更新 buttons)', async () => {
+      await page.getByRole('button', { name: '確認', exact: true }).click();
+      await expect(page.getByRole('button', { name: '戻る', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: '更新', exact: true })).toBeVisible();
+    });
+
+    await test.step('Step 8: Click 戻る - back to previous edit UI (キャンセル + 確認 buttons)', async () => {
+      await page.getByRole('button', { name: '戻る', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'キャンセル' })).toBeVisible();
+      await expect(page.getByRole('button', { name: '確認', exact: true })).toBeVisible();
+    });
+
+    await test.step('Step 9: Click 確認 - confirm view again', async () => {
+      await page.getByRole('button', { name: '確認', exact: true }).click();
+      await expect(page.getByRole('button', { name: '更新', exact: true })).toBeVisible();
+    });
+
+    await test.step('Step 10: Click 更新, accept confirm dialog - verify update success message', async () => {
+      const dialogPromise = page.waitForEvent('dialog');
+      // do not await click — native dialog blocks page until handled
+      page.getByRole('button', { name: '更新', exact: true }).click();
+      const dialog = await dialogPromise;
+      expect(dialog.message()).toBe('プロフィール情報を更新してもよろしいですか？');
+      await dialog.accept();
+      await expect(page.getByText('プロフィールを更新しました。')).toBeVisible({ timeout: 10000 });
+    });
+
+    await test.step('Step 11: operationlog has record with today + profile URL', async () => {
+      await page.goto('/system/operationlog');
+      await page.waitForLoadState('domcontentloaded');
+      const now = new Date();
+      const today = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
+      // a log row matching both today's 操作日時 and the profile フロントエンドURL
+      const row = page.locator('tbody tr')
+        .filter({ hasText: today })
+        .filter({ hasText: '/accounts/users/853172?tab=profile' });
+      await expect(row.first()).toBeVisible({ timeout: 10000 });
+    });
+
+    await test.step('Step 12: Back to profile tab', async () => {
+      await page.goto('/accounts/users/853172?tab=profile');
+      await page.waitForLoadState('domcontentloaded');
+    });
+
+    await test.step('Step 13: Click 編集 button', async () => {
+      await page.getByRole('button', { name: '編集' }).click();
+      await expect(page.getByRole('button', { name: '確認', exact: true })).toBeVisible();
+    });
+
+    await test.step('Step 14: Clear required fields', async () => {
+      for (const field of ['会社名', '住所', '市区町村', '電話番号', 'お客様へのメッセージ']) {
+        await page.locator('tr').filter({ hasText: field }).getByRole('textbox').clear();
+      }
+    });
+
+    await test.step('Step 15: Click 確認 - verify required-field error messages', async () => {
+      await page.getByRole('button', { name: '確認', exact: true }).click();
+      for (const msg of [
+        '会社名を入力してください。',
+        '住所を入力してください。',
+        '市区町村を入力してください。',
+        '電話番号を入力してください。',
+        'お客様へのメッセージを入力してください。',
+      ]) {
+        await expect(page.getByText(msg)).toBeVisible();
+      }
+    });
+
+    await test.step('Step 16: Enter over-100-char 会社名/市区町村 and invalid 電話番号', async () => {
+      const longText = '11111111111111~!@#$%^&*()_+ÁDFGHJKL:"111111111111111~!@#$%^&*()_+ÁDFGHJKL:"111111111111111~!@#$%^&*()';
+      await page.locator('tr').filter({ hasText: '会社名' }).getByRole('textbox').fill(longText);
+      await page.locator('tr').filter({ hasText: '市区町村' }).getByRole('textbox').fill(longText);
+      await page.locator('tr').filter({ hasText: '電話番号' }).getByRole('textbox').fill('111abc!@#$%^&*()_+');
+    });
+
+    await test.step('Step 17: Click 確認 - verify max-length + phone-format errors', async () => {
+      await page.getByRole('button', { name: '確認', exact: true }).click();
+      await expect(
+        page.locator('tr').filter({ hasText: '会社名' }).getByText('最大100文字')
+      ).toBeVisible();
+      await expect(
+        page.locator('tr').filter({ hasText: '市区町村' }).getByText('最大100文字')
+      ).toBeVisible();
+      await expect(
+        page.locator('tr').filter({ hasText: '電話番号' }).getByText('正しい電話番号形式で入力してください。')
+      ).toBeVisible();
     });
   });
 
   test('TC10 - Users detail > tab=bank (display)', async ({ authedPage: page }) => {
-    await page.goto('/accounts/users/838331?tab=bank');
+    await page.goto('/accounts/users/853172?tab=bank');
     await page.waitForLoadState('domcontentloaded');
 
-    await test.step('Verify 日本円口座 is default sub-tab with bank fields', async () => {
-      const jpyTab = page.getByRole('tab', { name: '日本円口座' });
-      await expect(jpyTab).toHaveAttribute('aria-selected', 'true');
-      for (const field of ['銀行名', '銀行支店名', '口座種別', '口座名義', '口座名義(カナ)', '口座番号', '銀行住所(国)']) {
-        await expect(page.getByText(field).first()).toBeVisible();
-      }
-    });
-
-    await test.step('Switch to 米ドル口座 sub-tab', async () => {
+    await test.step('Step 2: Switch to 米ドル口座 sub-tab and verify empty message', async () => {
       const usdTab = page.getByRole('tab', { name: '米ドル口座' });
       await usdTab.click();
       await expect(usdTab).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByText('米ドル口座情報の登録がありません。')).toBeVisible();
     });
 
-    await test.step('Switch back to 日本円口座', async () => {
+    await test.step('Step 3: Switch to 日本円口座 sub-tab', async () => {
       const jpyTab = page.getByRole('tab', { name: '日本円口座' });
       await jpyTab.click();
       await expect(jpyTab).toHaveAttribute('aria-selected', 'true');
-      await expect(page.getByText('銀行名').first()).toBeVisible();
+    });
+
+    await test.step('Step 4: Click 編集 button', async () => {
+      await page.getByRole('button', { name: '編集' }).click();
+    });
+
+    await test.step('Step 5: Edit 銀行名 and 銀行支店名', async () => {
+      await page.locator('tr').filter({ hasText: '銀行名' }).getByRole('textbox').fill('Mizuho 12356');
+      await page.locator('tr').filter({ hasText: '銀行支店名' }).getByRole('textbox').fill('Mizuho Bank');
+    });
+
+    await test.step('Step 6: Click 確認', async () => {
+      await page.getByRole('button', { name: '確認', exact: true }).click();
+      await expect(page.getByRole('button', { name: '更新', exact: true })).toBeVisible();
+    });
+
+    await test.step('Step 7-8: Click 更新, accept confirm dialog - verify success toast', async () => {
+      const dialogPromise = page.waitForEvent('dialog');
+      // do not await click — native dialog blocks page until handled
+      page.getByRole('button', { name: '更新', exact: true }).click();
+      const dialog = await dialogPromise;
+      expect(dialog.message()).toBe('銀行情報を更新してもよろしいですか？');
+      await dialog.accept();
+      await expect(page.getByText('銀行情報を更新しました。')).toBeVisible({ timeout: 10000 });
+    });
+
+    await test.step('Step 9: Click 編集 button', async () => {
+      await page.getByRole('button', { name: '編集' }).click();
+    });
+
+    await test.step('Step 10: Clear 銀行名', async () => {
+      await page.locator('tr').filter({ hasText: '銀行名' }).getByRole('textbox').clear();
+    });
+
+    await test.step('Step 11: Click 確認 - verify required-field error', async () => {
+      await page.getByRole('button', { name: '確認', exact: true }).click();
+      await expect(page.getByText('銀行名を入力してください。')).toBeVisible();
     });
   });
 
@@ -310,7 +444,7 @@ test.describe('PC - Users Detail', () => {
     await page.goto('/accounts/users/853172?tab=plans');
     await page.waitForLoadState('domcontentloaded');
 
-    await test.step('Verify plans table columns', async () => {
+    await test.step('Step 2: Display the data table with expected columns', async () => {
       for (const col of ['プラン名', '請求パターン', '月額基本料金', '成約手数料率', '定額手数料', '適用開始日']) {
         await expect(page.getByText(col).first()).toBeVisible();
       }
