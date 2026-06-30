@@ -102,3 +102,6 @@ usagi_autotest/
 - Default URL: https://usagi.tcv-dev.com
 - Hỗ trợ test trên cả PC (Desktop Chrome) và SP (Pixel 7)
 - Có thể chạy test riêng cho production và staging/dev environment
+
+<img width="768" height="1570" alt="image" src="https://github.com/user-attachments/assets/ff9eed7e-c062-4517-8230-3a567a02d63f" />
+
