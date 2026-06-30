@@ -30,13 +30,5 @@ test.describe('PC Login Tests', () => {
     await test.step('Wait for page to be fully loaded', async () => {
       await page.waitForLoadState('networkidle');
     });
-
-    // Add more specific tests based on Usagi homepage structure
-    // Example:
-    // await test.step('Verify main elements', async () => {
-    //   await expect(page.locator('header')).toBeVisible();
-    //   await expect(page.locator('main')).toBeVisible();
-    //   await expect(page.locator('footer')).toBeVisible();
-    // });
   });
 });

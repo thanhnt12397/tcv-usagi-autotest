@@ -13,7 +13,6 @@ test.describe('SP Homepage Tests', () => {
     await test.step('Verify page title', async () => {
       const title = await page.title();
       expect(title).toBeTruthy();
-      console.log('Page title:', title);
     });
   });
 
@@ -25,12 +24,5 @@ test.describe('SP Homepage Tests', () => {
     await test.step('Wait for page to be fully loaded', async () => {
       await page.waitForLoadState('networkidle');
     });
-
-    // Add more specific tests based on Usagi mobile homepage structure
-    // Example:
-    // await test.step('Verify main elements', async () => {
-    //   await expect(page.locator('header')).toBeVisible();
-    //   await expect(page.locator('main')).toBeVisible();
-    // });
   });
 });

@@ -132,15 +132,20 @@ test.describe('PC - Users Detail', () => {
       await expect(page.getByText('パスワードは4〜20文字で入力してください')).toBeVisible();
     });
 
-    await test.step('Step 20: Refill both password fields with valid password t123456@123', async () => {
+    await test.step('Step 20: Refill both password fields with valid password 123456', async () => {
       const passwordRow = page.locator('tr').filter({ hasText: 'パスワード' });
-      await passwordRow.getByRole('textbox').nth(0).fill('t123456@123');
-      await passwordRow.getByRole('textbox').nth(1).fill('t123456@123');
+      await passwordRow.getByRole('textbox').nth(0).fill('123456');
+      await passwordRow.getByRole('textbox').nth(1).fill('123456');
     });
 
-    await test.step('Step 21: Click 変更 - verify success toast', async () => {
-      await page.locator('tr').filter({ hasText: 'パスワード' })
+    await test.step('Step 21: Click 変更 - confirm dialog + verify success toast', async () => {
+      const dialogPromise = page.waitForEvent('dialog');
+      // do not await click — native dialog blocks page until handled
+      page.locator('tr').filter({ hasText: 'パスワード' })
         .getByRole('button', { name: '変更' }).click();
+      const dialog = await dialogPromise;
+      expect(dialog.message()).toBe('パスワードを変更してもよろしいですか？');
+      await dialog.accept();
       await expect(page.getByText('パスワード を編集しました。')).toBeVisible({ timeout: 10000 });
     });
   });

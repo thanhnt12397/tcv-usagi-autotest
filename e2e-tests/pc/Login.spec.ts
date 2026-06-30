@@ -20,8 +20,6 @@ test.describe('PC Login Tests', () => {
       // Verify page title - có thể là "ログイン" hoặc "usagi" tùy theo trang
       const title = await page.title();
       expect(title).toBeTruthy();
-      console.log('Page title:', title);
-      console.log('Current URL:', page.url());
 
       // Verify title có chứa "ログイン" hoặc "usagi" (tùy theo implementation)
       if (!title.includes('ログイン') && !title.includes('usagi')) {
@@ -37,6 +35,10 @@ test.describe('PC Login Tests', () => {
       await loginButton.waitFor({ state: 'visible', timeout: 10000 });
       await expect(loginButton).toBeVisible();
       await expect(loginButton).toContainText('ダッシュボードにログイン');
+
+      // Chờ IAP session thiết lập xong (background request) trước khi click,
+      // nếu không route guard ở '/' sẽ bounce ngược về '/login'.
+      await page.waitForLoadState('networkidle').catch(() => {});
 
       // Click button và chờ navigation
       const expectedUrl = 'https://usagi.tcv-dev.com/';
@@ -57,7 +59,6 @@ test.describe('PC Login Tests', () => {
 
       // Verify URL sau khi click
       await expect(page).toHaveURL(expectedUrl);
-      console.log('✓ Đã navigate đến:', page.url());
     });
   });
 });

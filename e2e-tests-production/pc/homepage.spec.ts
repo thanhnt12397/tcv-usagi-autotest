@@ -13,7 +13,6 @@ test.describe('PC Homepage Tests (Production)', () => {
     await test.step('Verify page title', async () => {
       const title = await page.title();
       expect(title).toBeTruthy();
-      console.log('Production page title:', title);
     });
   });
 });

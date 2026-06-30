@@ -24,7 +24,6 @@ export const test = base.extend<{}, WorkerFixtures>({
     if (page.url().includes('/login')) {
       await clickLoginButtonAndVerifyNavigation(page);
     }
-    console.log('🔐 Logged in once for worker:', workerInfo.project.name);
 
     await use(page); // CÙNG 1 page cho mọi test trong worker
     await context.close();

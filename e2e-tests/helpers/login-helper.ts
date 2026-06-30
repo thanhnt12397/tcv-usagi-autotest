@@ -21,7 +21,6 @@ export async function verifyLoginPageLoaded(page: Page) {
 
   const title = await page.title();
   expect(title).toBeTruthy();
-  console.log('Page title:', title);
 }
 
 /**
@@ -36,6 +35,10 @@ export async function clickLoginButtonAndVerifyNavigation(page: Page, expectedUr
   await expect(loginButton).toBeVisible();
   await expect(loginButton).toContainText('ダッシュボードにログイン');
 
+  // Chờ IAP session thiết lập xong (background request) trước khi click,
+  // nếu không route guard ở '/' sẽ bounce ngược về '/login'.
+  await page.waitForLoadState('networkidle').catch(() => {});
+
   // Click button và chờ navigation đến URL mong muốn
   await Promise.all([
     page.waitForURL(expectedUrl, { timeout: 30000 }),
@@ -49,5 +52,4 @@ export async function clickLoginButtonAndVerifyNavigation(page: Page, expectedUr
 
   // Step 2: Check result - verify trang hiển thị URL mong muốn
   await expect(page).toHaveURL(expectedUrl);
-  console.log('✓ Đã navigate đến:', page.url());
 }
